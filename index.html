@@ -18,7 +18,7 @@
 
   .add-btn {
     display: block;
-    margin: 0 auto 12px;
+    margin: 0 auto 10px;
     padding: 14px 24px;
     background: #00c853;
     color: #fff;
@@ -30,6 +30,34 @@
     max-width: 320px;
   }
   .add-btn:active { transform: scale(0.98); }
+
+  .backup-row {
+    display: flex;
+    gap: 8px;
+    justify-content: center;
+    margin-bottom: 8px;
+    flex-wrap: wrap;
+  }
+  .backup-row button {
+    padding: 10px 16px;
+    background: #37474f;
+    color: #fff;
+    border: 1px solid #546e7a;
+    border-radius: 8px;
+    cursor: pointer;
+    font-size: 14px;
+    flex: 1;
+    max-width: 155px;
+  }
+  .backup-row button:active { transform: scale(0.98); }
+  .backup-hint {
+    text-align: center;
+    font-size: 11px;
+    color: #666;
+    margin-bottom: 14px;
+    line-height: 1.4;
+    padding: 0 4px;
+  }
 
   .view-switch {
     display: flex;
@@ -615,12 +643,51 @@
     border-radius: 6px;
     display: block;
   }
+
+  /* Импорт — выбор действий */
+  .import-choice {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    margin-top: 18px;
+  }
+  .import-choice button {
+    padding: 14px;
+    border: none;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 15px;
+    font-weight: bold;
+  }
+  .import-choice button.replace { background: #ff9800; color: #000; }
+  .import-choice button.append { background: #00c853; color: #fff; }
+  .import-choice button.cancel { background: #555; color: #fff; }
+  .import-choice button:active { transform: scale(0.98); }
+
+  .backup-info {
+    background: #1f1f1f;
+    border-radius: 8px;
+    padding: 10px 12px;
+    font-size: 13px;
+    color: #ccc;
+    margin-top: 12px;
+    line-height: 1.6;
+  }
+  .backup-info b { color: #00c853; }
 </style>
 </head>
 <body>
 
 <h1>⚡ Тир-лист энергетиков</h1>
 <button class="add-btn" onclick="openNewDrinkModal()">+ Добавить энергетик</button>
+
+<div class="backup-row">
+  <button onclick="exportBackup()">📥 Экспорт</button>
+  <button onclick="openImportPicker()">📤 Импорт</button>
+</div>
+<div class="backup-hint">Резервная копия: сохрани файл и держи его в Telegram или на почте</div>
+
+<input type="file" id="importFileInput" accept="application/json,.json" style="display:none;" onchange="onImportFileSelected(event)">
 
 <div class="view-switch">
   <button id="btnTier" class="active" onclick="setView('tier')">🏆 Тир-лист</button>
@@ -749,6 +816,19 @@
   </div>
 </div>
 
+<!-- Модалка импорта: выбор действия -->
+<div class="modal" id="importChoiceModal">
+  <div class="modal-content">
+    <h2>Что делать с данными?</h2>
+    <div id="importPreviewInfo" class="backup-info"></div>
+    <div class="import-choice">
+      <button class="replace" onclick="confirmImport('replace')">🔄 Заменить всё</button>
+      <button class="append" onclick="confirmImport('append')">➕ Добавить к текущим</button>
+      <button class="cancel" onclick="cancelImport()">❌ Отмена</button>
+    </div>
+  </div>
+</div>
+
 <!-- Модалка просмотра энергетика -->
 <div class="note-view" id="noteView" onclick="closeNoteView(event)">
   <div class="note-view-content" onclick="event.stopPropagation()">
@@ -769,8 +849,8 @@
 <script>
   // ---------- ТИРЫ ----------
   const TIERS = [
-    { min: 10, max: 10, name: 'Вкусняшечка',    color: '#ff7f7f', emoji: '👑' },
-    { min: 8,  max: 9,  name: 'Неплохо',   color: '#ffbf7f', emoji: '⭐' },
+    { min: 10, max: 10, name: 'Легенда',    color: '#ff7f7f', emoji: '👑' },
+    { min: 8,  max: 9,  name: 'Отличный',   color: '#ffbf7f', emoji: '⭐' },
     { min: 6,  max: 7,  name: 'Норм',       color: '#ffff7f', emoji: '👌' },
     { min: 4,  max: 5,  name: 'Так себе',   color: '#7fff7f', emoji: '😐' },
     { min: 2,  max: 3,  name: 'Слабо',      color: '#7fbfff', emoji: '😴' },
@@ -918,6 +998,156 @@
     t.textContent = text;
     t.classList.add('show');
     setTimeout(() => t.classList.remove('show'), 1800);
+  }
+
+  // ---------- ЭКСПОРТ / ИМПОРТ ----------
+  function exportBackup() {
+    const backup = {
+      version: 1,
+      exportedAt: new Date().toISOString(),
+      drinks: drinks,
+      purchases: purchases,
+      monthlyLimit: monthlyLimit
+    };
+    const json = JSON.stringify(backup, null, 2);
+    const blob = new Blob([json], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    const today = new Date().toISOString().slice(0, 10);
+    a.href = url;
+    a.download = `energy-backup-${today}.json`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    setTimeout(() => URL.revokeObjectURL(url), 1000);
+    showToast('📥 Файл сохранён: energy-backup-' + today + '.json');
+  }
+
+  let pendingImportData = null;
+
+  function openImportPicker() {
+    document.getElementById('importFileInput').value = '';
+    document.getElementById('importFileInput').click();
+  }
+
+  function onImportFileSelected(e) {
+    const f = e.target.files && e.target.files[0];
+    if (!f) return;
+
+    const reader = new FileReader();
+    reader.onload = ev => {
+      try {
+        const data = JSON.parse(ev.target.result);
+        if (!data || typeof data !== 'object' || !Array.isArray(data.drinks)) {
+          throw new Error('Не тот формат');
+        }
+        pendingImportData = data;
+        showImportChoice(data);
+      } catch (err) {
+        alert('Не получилось прочитать файл. Возможно, это не резервная копия.');
+        console.warn(err);
+      }
+    };
+    reader.onerror = () => alert('Ошибка чтения файла.');
+    reader.readAsText(f);
+  }
+
+  function showImportChoice(data) {
+    const cntD = Array.isArray(data.drinks) ? data.drinks.length : 0;
+    const cntP = Array.isArray(data.purchases) ? data.purchases.length : 0;
+    let when = '';
+    if (data.exportedAt) {
+      const d = new Date(data.exportedAt);
+      when = `Дата копии: ${d.toLocaleDateString('ru-RU')} ${d.toLocaleTimeString('ru-RU', {hour:'2-digit', minute:'2-digit'})}`;
+    }
+    document.getElementById('importPreviewInfo').innerHTML = `
+      В файле:<br>
+      🏷 Энергетиков: <b>${cntD}</b><br>
+      🛒 Покупок: <b>${cntP}</b><br>
+      ${when ? '<br>' + when : ''}
+    `;
+    document.getElementById('importChoiceModal').classList.add('open');
+  }
+
+  function cancelImport() {
+    pendingImportData = null;
+    document.getElementById('importChoiceModal').classList.remove('open');
+  }
+
+  function confirmImport(mode) {
+    if (!pendingImportData) return;
+
+    const inDrinks = Array.isArray(pendingImportData.drinks) ? pendingImportData.drinks : [];
+    const inPurchases = Array.isArray(pendingImportData.purchases) ? pendingImportData.purchases : [];
+    const inLimit = pendingImportData.monthlyLimit;
+
+    // Нормализация
+    const normDrinks = inDrinks.map(d => ({
+      id: d.id || ('d' + Date.now() + Math.random().toString(36).slice(2, 5)),
+      name: d.name || '',
+      brand: d.brand || '',
+      rating: d.rating || 5,
+      note: d.note || '',
+      photo: d.photo || ''
+    }));
+    const normPurchases = inPurchases.map(p => ({
+      id: p.id || ('p' + Date.now() + Math.random().toString(36).slice(2, 5)),
+      drinkId: p.drinkId,
+      date: p.date || '',
+      price: p.price === '' || p.price == null ? '' : Number(p.price),
+      currency: p.currency || 'BYN',
+      place: p.place || '',
+      priceBYN: p.priceBYN
+    }));
+
+    if (mode === 'replace') {
+      drinks = normDrinks;
+      purchases = normPurchases;
+      if (typeof inLimit === 'number' && inLimit > 0) {
+        monthlyLimit = inLimit;
+        saveLimit();
+      }
+    } else {
+      // Добавить: доклеиваем, разрешая конфликты по id
+      const existingDrinkIds = new Set(drinks.map(d => d.id));
+      const idMap = new Map(); // старый id → новый id (если конфликт)
+
+      normDrinks.forEach(d => {
+        let newId = d.id;
+        if (existingDrinkIds.has(newId)) {
+          newId = 'd' + Date.now() + Math.random().toString(36).slice(2, 5);
+          idMap.set(d.id, newId);
+        }
+        existingDrinkIds.add(newId);
+        drinks.push({ ...d, id: newId });
+      });
+
+      const existingPurchaseIds = new Set(purchases.map(p => p.id));
+      normPurchases.forEach(p => {
+        let newId = p.id;
+        if (existingPurchaseIds.has(newId)) {
+          newId = 'p' + Date.now() + Math.random().toString(36).slice(2, 5);
+        }
+        existingPurchaseIds.add(newId);
+        // Если у покупки drinkId замаплен на новый id — применяем
+        const mappedDrinkId = idMap.get(p.drinkId) || p.drinkId;
+        purchases.push({ ...p, id: newId, drinkId: mappedDrinkId });
+      });
+    }
+
+    try {
+      saveAll();
+    } catch (e) {
+      alert('Не хватило места в браузере. Возможно, слишком много фото.');
+      return;
+    }
+
+    pendingImportData = null;
+    document.getElementById('importChoiceModal').classList.remove('open');
+    render();
+    showToast(mode === 'replace'
+      ? `✅ Заменено: ${normDrinks.length} энергетиков, ${normPurchases.length} покупок`
+      : `✅ Добавлено: ${normDrinks.length} энергетиков, ${normPurchases.length} покупок`);
   }
 
   async function loadRates() {
