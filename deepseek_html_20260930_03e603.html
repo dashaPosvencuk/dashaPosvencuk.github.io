@@ -1,0 +1,2105 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Тир-лист энергетиков</title>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+<style>
+  * { box-sizing: border-box; font-family: Arial, sans-serif; }
+  body {
+    margin: 0;
+    padding: 12px;
+    background: #1a1a1a;
+    color: #fff;
+    -webkit-tap-highlight-color: transparent;
+  }
+  h1 { text-align: center; font-size: 20px; margin: 8px 0 14px; }
+
+  .add-btn {
+    display: block;
+    margin: 0 auto 10px;
+    padding: 14px 24px;
+    background: #00c853;
+    color: #fff;
+    border: none;
+    border-radius: 8px;
+    font-size: 16px;
+    cursor: pointer;
+    width: 100%;
+    max-width: 320px;
+  }
+  .add-btn:active { transform: scale(0.98); }
+
+  .backup-row {
+    display: flex;
+    gap: 8px;
+    justify-content: center;
+    margin-bottom: 8px;
+    flex-wrap: wrap;
+  }
+  .backup-row button {
+    padding: 10px 16px;
+    background: #37474f;
+    color: #fff;
+    border: 1px solid #546e7a;
+    border-radius: 8px;
+    cursor: pointer;
+    font-size: 14px;
+    flex: 1;
+    max-width: 155px;
+  }
+  .backup-row button:active { transform: scale(0.98); }
+  .backup-hint {
+    text-align: center;
+    font-size: 11px;
+    color: #666;
+    margin-bottom: 14px;
+    line-height: 1.4;
+    padding: 0 4px;
+  }
+
+  .view-switch {
+    display: flex;
+    gap: 6px;
+    justify-content: center;
+    margin-bottom: 14px;
+    flex-wrap: wrap;
+  }
+  .view-switch button {
+    padding: 10px 14px;
+    background: #333;
+    color: #ccc;
+    border: 1px solid #444;
+    border-radius: 20px;
+    cursor: pointer;
+    font-size: 13px;
+  }
+  .view-switch button.active {
+    background: #00c853;
+    color: #fff;
+    border-color: #00c853;
+  }
+
+  .tier {
+    display: flex;
+    align-items: stretch;
+    margin-bottom: 8px;
+    background: #262626;
+    border-radius: 8px;
+    overflow: hidden;
+    min-height: 100px;
+  }
+  .tier-label {
+    width: 80px;
+    flex-shrink: 0;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    font-size: 13px;
+    font-weight: bold;
+    color: #000;
+    text-align: center;
+    padding: 4px;
+    line-height: 1.15;
+  }
+  .tier-label .tier-range {
+    font-size: 10px;
+    font-weight: normal;
+    opacity: 0.7;
+    margin-top: 2px;
+  }
+  .tier-items {
+    flex: 1;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    padding: 8px;
+    align-content: flex-start;
+    min-width: 0;
+  }
+  .tier-empty {
+    color: #555;
+    font-size: 13px;
+    align-self: center;
+    padding-left: 8px;
+  }
+
+  .card {
+    flex: 0 0 auto;
+    width: calc(50% - 3px);
+    max-width: 130px;
+    min-width: 90px;
+    background: #333;
+    border-radius: 8px;
+    overflow: hidden;
+    text-align: center;
+    font-size: 12px;
+    position: relative;
+    padding-bottom: 4px;
+    cursor: pointer;
+  }
+  @media (min-width: 500px) {
+    .card { width: 130px; }
+  }
+  .card img {
+    width: 100%;
+    height: 80px;
+    object-fit: cover;
+    display: block;
+    background: #222;
+  }
+  .card .name {
+    padding: 4px 4px 2px;
+    font-weight: bold;
+    word-break: break-word;
+  }
+  .card .brand {
+    color: #aaa;
+    font-size: 11px;
+    padding: 0 4px 2px;
+    word-break: break-word;
+  }
+  .card .rating {
+    color: #00c853;
+    font-size: 11px;
+    padding-bottom: 2px;
+  }
+  .card .times {
+    color: #29b6f6;
+    font-size: 10px;
+    padding-bottom: 2px;
+  }
+  .card .note-preview {
+    color: #888;
+    font-size: 10px;
+    padding: 0 4px 4px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .card .del {
+    position: absolute;
+    top: 4px;
+    right: 4px;
+    background: rgba(0,0,0,.65);
+    color: #fff;
+    border: none;
+    border-radius: 50%;
+    width: 24px;
+    height: 24px;
+    cursor: pointer;
+    font-size: 13px;
+    line-height: 1;
+    z-index: 2;
+    padding: 0;
+  }
+
+  .section-divider {
+    margin: 24px 0 16px;
+    text-align: center;
+    font-size: 13px;
+    color: #888;
+    position: relative;
+  }
+  .section-divider::before,
+  .section-divider::after {
+    content: '';
+    position: absolute;
+    top: 50%;
+    width: calc(50% - 80px);
+    height: 1px;
+    background: #444;
+  }
+  .section-divider::before { left: 0; }
+  .section-divider::after { right: 0; }
+
+  .list-row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    background: #262626;
+    border-radius: 8px;
+    padding: 10px;
+    margin-bottom: 6px;
+    cursor: pointer;
+  }
+  .list-row img {
+    width: 50px;
+    height: 50px;
+    object-fit: cover;
+    border-radius: 6px;
+    flex-shrink: 0;
+    background: #222;
+  }
+  .list-row .info { flex: 1; min-width: 0; }
+  .list-row .info .title {
+    font-weight: bold;
+    font-size: 14px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .list-row .info .sub {
+    font-size: 11px;
+    color: #999;
+    margin-top: 2px;
+    line-height: 1.35;
+  }
+  .list-row .price {
+    font-weight: bold;
+    color: #00c853;
+    font-size: 13px;
+    flex-shrink: 0;
+    text-align: right;
+    line-height: 1.3;
+  }
+  .list-row .price .conv {
+    font-size: 10px;
+    color: #888;
+    font-weight: normal;
+  }
+  .list-empty {
+    color: #666;
+    text-align: center;
+    padding: 30px 0;
+    font-size: 14px;
+  }
+  .list-header {
+    color: #888;
+    font-size: 12px;
+    margin: 12px 0 6px;
+    padding-left: 4px;
+  }
+
+  .spend-summary {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 8px;
+    margin-bottom: 16px;
+  }
+  @media (min-width: 480px) {
+    .spend-summary { grid-template-columns: 1fr 1fr; }
+  }
+  .spend-card {
+    background: #262626;
+    border-radius: 10px;
+    padding: 14px;
+    text-align: center;
+    border: 1px solid #333;
+  }
+  .spend-card .label {
+    font-size: 11px;
+    color: #999;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    margin-bottom: 6px;
+  }
+  .spend-card .value {
+    font-size: 24px;
+    font-weight: bold;
+    color: #00c853;
+    line-height: 1;
+  }
+  .spend-card.all .value { color: #29b6f6; }
+
+  .cal-wrap { max-width: 520px; margin: 0 auto; }
+  .cal-nav {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    background: #262626;
+    border-radius: 10px;
+    padding: 10px 14px;
+    margin-bottom: 12px;
+  }
+  .cal-nav button {
+    background: #333;
+    color: #fff;
+    border: 1px solid #444;
+    border-radius: 8px;
+    width: 40px;
+    height: 40px;
+    font-size: 18px;
+    cursor: pointer;
+  }
+  .cal-nav button:active { transform: scale(0.95); }
+  .cal-month {
+    font-size: 16px;
+    font-weight: bold;
+    text-align: center;
+    flex: 1;
+  }
+  .cal-status {
+    border-radius: 10px;
+    padding: 14px;
+    margin-bottom: 14px;
+    text-align: center;
+    font-size: 15px;
+    font-weight: bold;
+    line-height: 1.4;
+  }
+  .cal-status.ok { background: #1e4620; color: #7fff8f; border: 1px solid #2e7d32; }
+  .cal-status.over { background: #4a1e1e; color: #ff8a8a; border: 1px solid #c62828; }
+  .cal-status .sub {
+    display: block;
+    font-size: 12px;
+    font-weight: normal;
+    margin-top: 4px;
+    opacity: 0.85;
+  }
+  .cal-grid {
+    display: grid;
+    grid-template-columns: repeat(7, 1fr);
+    gap: 4px;
+    margin-bottom: 14px;
+  }
+  .cal-dow { text-align: center; font-size: 11px; color: #888; padding: 6px 0; }
+  .cal-day {
+    aspect-ratio: 1 / 1;
+    background: #262626;
+    border-radius: 8px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    font-size: 13px;
+    position: relative;
+    border: 1px solid transparent;
+  }
+  .cal-day.empty { background: transparent; border: none; }
+  .cal-day.today { border-color: #00c853; }
+  .cal-day.has-1 { background: #1e3a5f; }
+  .cal-day.has-2 { background: #4a3a1e; }
+  .cal-day.has-3 { background: #5f1e1e; }
+  .cal-day.has-many { background: #7a0f0f; }
+  .cal-day .num { font-weight: bold; font-size: 13px; }
+  .cal-day .cnt { font-size: 10px; margin-top: 2px; opacity: 0.9; }
+
+  .cal-limit {
+    background: #262626;
+    border-radius: 10px;
+    padding: 12px 14px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    font-size: 14px;
+    margin-bottom: 12px;
+  }
+  .cal-limit input {
+    width: 70px;
+    padding: 8px;
+    border-radius: 6px;
+    border: 1px solid #444;
+    background: #1a1a1a;
+    color: #fff;
+    font-size: 15px;
+    text-align: center;
+  }
+  .cal-legend { font-size: 11px; color: #888; text-align: center; line-height: 1.6; margin-top: 8px; }
+
+  .stats-title { font-size: 14px; color: #bbb; margin: 8px 0 10px; text-align: center; font-weight: bold; }
+  .stats-grid { display: grid; grid-template-columns: 1fr; gap: 8px; margin-bottom: 16px; }
+  @media (min-width: 420px) { .stats-grid { grid-template-columns: 1fr 1fr 1fr; } }
+  .stat-card {
+    background: #262626;
+    border-radius: 10px;
+    padding: 14px 10px;
+    text-align: center;
+    border: 1px solid #333;
+  }
+  .stat-card .label { font-size: 11px; color: #999; margin-bottom: 6px; text-transform: uppercase; letter-spacing: 0.5px; }
+  .stat-card .value { font-size: 26px; font-weight: bold; color: #00c853; line-height: 1; }
+  .stat-card .unit { font-size: 11px; color: #888; margin-top: 4px; }
+  .stat-card.year .value { color: #29b6f6; }
+  .stat-card.quarter .value { color: #ffca28; }
+  .stat-card.all .value { color: #00c853; }
+
+  .charts-wrap { max-width: 560px; margin: 0 auto; }
+  .chart-block {
+    background: #262626;
+    border-radius: 10px;
+    padding: 14px;
+    margin-bottom: 14px;
+  }
+  .chart-block h3 {
+    margin: 0 0 12px;
+    font-size: 15px;
+    color: #ddd;
+    font-weight: bold;
+    text-align: center;
+  }
+  .chart-canvas-wrap {
+    position: relative;
+    height: 260px;
+  }
+  .chart-empty {
+    text-align: center;
+    color: #777;
+    font-size: 13px;
+    padding: 30px 10px;
+  }
+
+  .modal {
+    display: none;
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,.75);
+    justify-content: center;
+    align-items: center;
+    z-index: 100;
+    padding: 12px;
+  }
+  .modal.open { display: flex; }
+  .modal-content {
+    background: #2a2a2a;
+    padding: 18px;
+    border-radius: 12px;
+    width: 100%;
+    max-width: 420px;
+    max-height: 92vh;
+    overflow-y: auto;
+  }
+  .modal-content h2 { margin: 0 0 12px; font-size: 18px; }
+  .modal-content label { display: block; margin: 10px 0 4px; font-size: 14px; color: #ddd; }
+  .modal-content input[type=text],
+  .modal-content input[type=number],
+  .modal-content input[type=date],
+  .modal-content input[type=file],
+  .modal-content textarea,
+  .modal-content select {
+    width: 100%;
+    padding: 12px;
+    border-radius: 6px;
+    border: 1px solid #444;
+    background: #1a1a1a;
+    color: #fff;
+    font-size: 16px;
+    font-family: inherit;
+  }
+  .modal-content input:disabled,
+  .modal-content textarea:disabled,
+  .modal-content select:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+  }
+  .modal-content textarea { resize: vertical; min-height: 60px; }
+  .modal-content input[type=range] { width: 100%; accent-color: #00c853; height: 32px; }
+  .price-row { display: flex; gap: 8px; }
+  .price-row input { flex: 1; min-width: 0; }
+  .price-row select { width: 130px; flex-shrink: 0; padding: 12px 8px; }
+
+  .modal-actions { display: flex; gap: 10px; margin-top: 18px; }
+  .modal-actions button {
+    flex: 1;
+    padding: 14px;
+    border: none;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 15px;
+    font-weight: bold;
+  }
+  .save { background: #00c853; color: #fff; }
+  .cancel { background: #555; color: #fff; }
+  .danger { background: #c62828; color: #fff; }
+  .edit-btn { background: #2979ff; color: #fff; }
+  .again-btn { background: #00b0ff; color: #fff; }
+  .save:active, .cancel:active, .danger:active, .edit-btn:active, .again-btn:active { transform: scale(0.98); }
+
+  #ratingValue { font-weight: bold; color: #00c853; }
+  .hint { font-size: 11px; color: #777; margin-top: 4px; }
+  .locked-hint { font-size: 11px; color: #ffa726; margin-top: 4px; }
+
+  .toast {
+    position: fixed;
+    bottom: 20px;
+    left: 50%;
+    transform: translateX(-50%) translateY(80px);
+    background: #00c853;
+    color: #fff;
+    padding: 12px 24px;
+    border-radius: 8px;
+    font-size: 15px;
+    font-weight: bold;
+    transition: transform 0.3s;
+    z-index: 200;
+    pointer-events: none;
+    max-width: 90vw;
+    text-align: center;
+  }
+  .toast.show { transform: translateX(-50%) translateY(0); }
+
+  .note-view {
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,.85);
+    display: none;
+    justify-content: center;
+    align-items: center;
+    z-index: 150;
+    padding: 12px;
+  }
+  .note-view.open { display: flex; }
+  .note-view-content {
+    background: #2a2a2a;
+    border-radius: 12px;
+    max-width: 480px;
+    width: 100%;
+    max-height: 92vh;
+    overflow-y: auto;
+    padding: 18px;
+  }
+  .note-view-content .top-photo {
+    width: 100%;
+    border-radius: 8px;
+    margin-bottom: 12px;
+    max-height: 260px;
+    object-fit: cover;
+  }
+  .note-view-content h2 { margin: 0 0 6px; font-size: 18px; }
+  .note-view-content .meta { color: #aaa; font-size: 13px; margin-bottom: 10px; }
+  .note-view-content .note-text {
+    white-space: pre-wrap;
+    line-height: 1.5;
+    color: #ddd;
+    background: #1f1f1f;
+    border-radius: 8px;
+    padding: 10px 12px;
+    font-size: 14px;
+    margin-bottom: 12px;
+  }
+
+  .purchases-title {
+    font-size: 14px;
+    color: #bbb;
+    margin: 14px 0 8px;
+    font-weight: bold;
+  }
+  .purchases-summary {
+    background: #1f1f1f;
+    border-radius: 8px;
+    padding: 10px 12px;
+    font-size: 13px;
+    color: #ccc;
+    margin-bottom: 10px;
+    line-height: 1.6;
+  }
+  .purchases-summary b { color: #00c853; }
+
+  .purchase-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    background: #1f1f1f;
+    border-radius: 8px;
+    padding: 8px 10px;
+    margin-bottom: 6px;
+    font-size: 13px;
+  }
+  .purchase-row .p-date { color: #29b6f6; font-weight: bold; flex-shrink: 0; }
+  .purchase-row .p-price { color: #00c853; font-weight: bold; flex-shrink: 0; }
+  .purchase-row .p-place { color: #999; flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .purchase-row .p-actions { display: flex; gap: 4px; flex-shrink: 0; }
+  .purchase-row .p-actions button {
+    background: transparent;
+    border: none;
+    color: #888;
+    font-size: 15px;
+    cursor: pointer;
+    padding: 2px 6px;
+    border-radius: 4px;
+  }
+  .purchase-row .p-actions button:hover { color: #fff; background: #333; }
+
+  .price-chart-wrap {
+    background: #1f1f1f;
+    border-radius: 8px;
+    padding: 12px;
+    margin-bottom: 12px;
+    position: relative;
+    height: 200px;
+  }
+  .price-chart-empty {
+    text-align: center;
+    color: #777;
+    font-size: 12px;
+    padding: 60px 10px;
+  }
+
+  .rates-info {
+    text-align: center;
+    font-size: 11px;
+    color: #666;
+    margin-bottom: 12px;
+    line-height: 1.4;
+    padding: 0 4px;
+  }
+
+  .photo-preview {
+    margin-top: 8px;
+    max-width: 120px;
+    border-radius: 6px;
+    display: block;
+  }
+
+  /* Импорт — выбор действий */
+  .import-choice {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    margin-top: 18px;
+  }
+  .import-choice button {
+    padding: 14px;
+    border: none;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 15px;
+    font-weight: bold;
+  }
+  .import-choice button.replace { background: #ff9800; color: #000; }
+  .import-choice button.append { background: #00c853; color: #fff; }
+  .import-choice button.cancel { background: #555; color: #fff; }
+  .import-choice button:active { transform: scale(0.98); }
+
+  .backup-info {
+    background: #1f1f1f;
+    border-radius: 8px;
+    padding: 10px 12px;
+    font-size: 13px;
+    color: #ccc;
+    margin-top: 12px;
+    line-height: 1.6;
+  }
+  .backup-info b { color: #00c853; }
+</style>
+</head>
+<body>
+
+<h1>⚡ Тир-лист энергетиков</h1>
+<button class="add-btn" onclick="openNewDrinkModal()">+ Добавить энергетик</button>
+
+<div class="backup-row">
+  <button onclick="exportBackup()">📥 Экспорт</button>
+  <button onclick="openImportPicker()">📤 Импорт</button>
+</div>
+<div class="backup-hint">Резервная копия: сохрани файл и держи его в Telegram или на почте</div>
+
+<input type="file" id="importFileInput" accept="application/json,.json" style="display:none;" onchange="onImportFileSelected(event)">
+
+<div class="view-switch">
+  <button id="btnTier" class="active" onclick="setView('tier')">🏆 Тир-лист</button>
+  <button id="btnPrice" onclick="setView('price')">💰 По цене</button>
+  <button id="btnCal" onclick="setView('calendar')">📅 Календарь</button>
+  <button id="btnCharts" onclick="setView('charts')">📈 Графики</button>
+</div>
+
+<div class="rates-info" id="ratesInfo"></div>
+
+<div id="tiers"></div>
+<div id="listView"></div>
+<div id="calendarView" style="display:none;"></div>
+<div id="chartsView" style="display:none;"></div>
+
+<!-- Модалка добавления/редактирования энергетика -->
+<div class="modal" id="drinkModal">
+  <div class="modal-content">
+    <h2 id="drinkModalTitle">Новый энергетик</h2>
+
+    <label>Название *</label>
+    <input type="text" id="inputName" placeholder="Например: Red Bull">
+
+    <label>Бренд</label>
+    <input type="text" id="inputBrand" placeholder="Например: Red Bull GmbH">
+
+    <label>Фото</label>
+    <input type="file" id="inputPhoto" accept="image/*" onchange="onPhotoChange(event)">
+    <div class="hint">Если не выбирать новое — останется прежнее фото.</div>
+    <img id="photoPreview" class="photo-preview" style="display:none;">
+
+    <label>Оценка: <span id="ratingValue">5</span>/10 — <span id="tierPreview">Норм</span></label>
+    <input type="range" id="inputRating" min="1" max="10" value="5"
+           oninput="onRatingInput(this.value)">
+
+    <label>Заметка (описание)</label>
+    <textarea id="inputNote" placeholder="Вкус, эффект..."></textarea>
+
+    <div id="firstPurchaseBlock">
+      <h3 style="margin:16px 0 8px; font-size:14px; color:#bbb;">Первая покупка</h3>
+
+      <label>Цена</label>
+      <div class="price-row">
+        <input type="number" id="inputPrice" placeholder="4.50" step="0.01" min="0">
+        <select id="inputCurrency">
+          <option value="BYN">Бел. руб.</option>
+          <option value="USD">Доллар</option>
+          <option value="EUR">Евро</option>
+          <option value="RUB">Рос. руб.</option>
+        </select>
+      </div>
+
+      <label>Дата, когда выпила</label>
+      <input type="date" id="inputDate">
+
+      <label>Где купила</label>
+      <input type="text" id="inputPlace" placeholder="Город, магазин">
+    </div>
+
+    <div class="modal-actions">
+      <button class="cancel" onclick="closeDrinkModal()">Отмена</button>
+      <button class="save" onclick="saveDrink()">Сохранить</button>
+    </div>
+  </div>
+</div>
+
+<!-- Модалка повторной записи -->
+<div class="modal" id="repeatModal">
+  <div class="modal-content">
+    <h2 id="repeatModalTitle">Записать ещё раз</h2>
+    <div class="locked-hint">Название, бренд, оценка и заметка — общие для этого энергетика. Меняй только цену, дату и место.</div>
+
+    <label>Энергетик</label>
+    <input type="text" id="repeatDrinkName" disabled>
+
+    <label>Цена</label>
+    <div class="price-row">
+      <input type="number" id="repeatPrice" placeholder="4.50" step="0.01" min="0">
+      <select id="repeatCurrency">
+        <option value="BYN">Бел. руб.</option>
+        <option value="USD">Доллар</option>
+        <option value="EUR">Евро</option>
+        <option value="RUB">Рос. руб.</option>
+      </select>
+    </div>
+
+    <label>Дата, когда выпила</label>
+    <input type="date" id="repeatDate">
+
+    <label>Где купила</label>
+    <input type="text" id="repeatPlace" placeholder="Город, магазин">
+
+    <div class="modal-actions">
+      <button class="cancel" onclick="closeRepeatModal()">Отмена</button>
+      <button class="save" onclick="saveRepeat()">Сохранить</button>
+    </div>
+  </div>
+</div>
+
+<!-- Модалка редактирования покупки -->
+<div class="modal" id="purchaseModal">
+  <div class="modal-content">
+    <h2>Изменить покупку</h2>
+
+    <label>Цена</label>
+    <div class="price-row">
+      <input type="number" id="purPrice" placeholder="4.50" step="0.01" min="0">
+      <select id="purCurrency">
+        <option value="BYN">Бел. руб.</option>
+        <option value="USD">Доллар</option>
+        <option value="EUR">Евро</option>
+        <option value="RUB">Рос. руб.</option>
+      </select>
+    </div>
+
+    <label>Дата</label>
+    <input type="date" id="purDate">
+
+    <label>Где купила</label>
+    <input type="text" id="purPlace">
+
+    <div class="modal-actions">
+      <button class="cancel" onclick="closePurchaseModal()">Отмена</button>
+      <button class="save" onclick="savePurchaseEdit()">Сохранить</button>
+    </div>
+  </div>
+</div>
+
+<!-- Модалка импорта: выбор действия -->
+<div class="modal" id="importChoiceModal">
+  <div class="modal-content">
+    <h2>Что делать с данными?</h2>
+    <div id="importPreviewInfo" class="backup-info"></div>
+    <div class="import-choice">
+      <button class="replace" onclick="confirmImport('replace')">🔄 Заменить всё</button>
+      <button class="append" onclick="confirmImport('append')">➕ Добавить к текущим</button>
+      <button class="cancel" onclick="cancelImport()">❌ Отмена</button>
+    </div>
+  </div>
+</div>
+
+<!-- Модалка просмотра энергетика -->
+<div class="note-view" id="noteView" onclick="closeNoteView(event)">
+  <div class="note-view-content" onclick="event.stopPropagation()">
+    <div id="noteViewBody"></div>
+    <div class="modal-actions" style="flex-direction:column;">
+      <button class="again-btn" onclick="openRepeatFromView()">🔁 Записать ещё раз</button>
+      <div style="display:flex; gap:10px;">
+        <button class="edit-btn" onclick="openEditFromView()">✏️ Редактировать</button>
+        <button class="danger" onclick="deleteFromView()">🗑 Удалить</button>
+      </div>
+      <button class="cancel" onclick="closeNoteView()">Закрыть</button>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast">Сохранено!</div>
+
+<script>
+  // ---------- ТИРЫ ----------
+  const TIERS = [
+    { min: 10, max: 10, name: 'Легенда',    color: '#ff7f7f', emoji: '👑' },
+    { min: 8,  max: 9,  name: 'Отличный',   color: '#ffbf7f', emoji: '⭐' },
+    { min: 6,  max: 7,  name: 'Норм',       color: '#ffff7f', emoji: '👌' },
+    { min: 4,  max: 5,  name: 'Так себе',   color: '#7fff7f', emoji: '😐' },
+    { min: 2,  max: 3,  name: 'Слабо',      color: '#7fbfff', emoji: '😴' },
+    { min: 1,  max: 1,  name: 'Помои',      color: '#bf7fbf', emoji: '🤢' },
+  ];
+  function tierByRating(r) {
+    return TIERS.find(t => r >= t.min && r <= t.max) || TIERS[TIERS.length - 1];
+  }
+
+  const CURRENCY_SHORT = { BYN: 'BYN', USD: 'USD', EUR: 'EUR', RUB: 'RUB' };
+  const MONTH_NAMES = ['Январь','Февраль','Март','Апрель','Май','Июнь','Июль','Август','Сентябрь','Октябрь','Ноябрь','Декабрь'];
+  const MONTH_SHORT = ['Янв','Фев','Мар','Апр','Май','Июн','Июл','Авг','Сен','Окт','Ноя','Дек'];
+  const DOW = ['Пн','Вт','Ср','Чт','Пт','Сб','Вс'];
+
+  // ---------- ХРАНИЛИЩЕ ----------
+  let drinks = [];
+  let purchases = [];
+  let monthlyLimit = 3;
+  let ratesCache = null;
+
+  function loadData() {
+    try {
+      const rawDrinks = JSON.parse(localStorage.getItem('drinks') || '[]');
+      const rawPurchases = localStorage.getItem('purchases');
+      const migrated = localStorage.getItem('priceBYN_migrated') === '1';
+
+      if (rawPurchases === null || !migrated) {
+        const oldDrinks = rawPurchases === null ? rawDrinks : JSON.parse(localStorage.getItem('drinks_backup') || '[]');
+        if (rawPurchases !== null) {
+          drinks = rawDrinks;
+          purchases = JSON.parse(rawPurchases || '[]');
+          drinks = drinks.map(d => ({
+            id: d.id,
+            name: d.name || '',
+            brand: d.brand || '',
+            rating: d.rating || 5,
+            note: d.note || '',
+            photo: d.photo || ''
+          }));
+          purchases = purchases.map(p => ({
+            id: p.id,
+            drinkId: p.drinkId,
+            date: p.date || '',
+            price: p.price === '' || p.price == null ? '' : Number(p.price),
+            currency: p.currency || 'BYN',
+            place: p.place || '',
+            priceBYN: p.priceBYN
+          }));
+          localStorage.setItem('priceBYN_migrated', '1');
+        } else {
+          drinks = [];
+          purchases = [];
+          oldDrinks.forEach((d, i) => {
+            const drinkId = d.id || ('d' + Date.now() + i);
+            drinks.push({
+              id: drinkId,
+              name: d.name || '',
+              brand: d.brand || '',
+              rating: d.rating || 5,
+              note: d.note || '',
+              photo: d.photo || ''
+            });
+            if (d.date || (d.price !== '' && d.price != null) || d.place) {
+              purchases.push({
+                id: 'p' + Date.now() + i + Math.random().toString(36).slice(2, 5),
+                drinkId: drinkId,
+                date: d.date || '',
+                price: d.price === '' || d.price == null ? '' : Number(d.price),
+                currency: d.currency || 'BYN',
+                place: d.place || '',
+                priceBYN: undefined
+              });
+            }
+          });
+          localStorage.setItem('priceBYN_migrated', '1');
+        }
+        saveAll();
+      } else {
+        drinks = rawDrinks;
+        purchases = JSON.parse(rawPurchases || '[]');
+        drinks = drinks.map(d => ({
+          id: d.id,
+          name: d.name || '',
+          brand: d.brand || '',
+          rating: d.rating || 5,
+          note: d.note || '',
+          photo: d.photo || ''
+        }));
+        purchases = purchases.map(p => ({
+          id: p.id,
+          drinkId: p.drinkId,
+          date: p.date || '',
+          price: p.price === '' || p.price == null ? '' : Number(p.price),
+          currency: p.currency || 'BYN',
+          place: p.place || '',
+          priceBYN: p.priceBYN
+        }));
+      }
+
+      const lim = localStorage.getItem('monthlyLimit');
+      if (lim) monthlyLimit = parseInt(lim, 10) || 3;
+    } catch (e) {
+      console.error('Ошибка загрузки данных', e);
+      drinks = [];
+      purchases = [];
+    }
+  }
+
+  function saveAll() {
+    try {
+      localStorage.setItem('drinks', JSON.stringify(drinks));
+      localStorage.setItem('purchases', JSON.stringify(purchases));
+    } catch (e) {
+      alert('Не хватило места в браузере. Удали старые карточки или фото поменьше.');
+      throw e;
+    }
+  }
+  function saveLimit() {
+    try { localStorage.setItem('monthlyLimit', String(monthlyLimit)); } catch (e) {}
+  }
+
+  // ---------- ХЕЛПЕРЫ ----------
+  function getPurchasesOf(drinkId) {
+    return purchases.filter(p => p.drinkId === drinkId);
+  }
+  function getLastPurchase(drinkId) {
+    const ps = getPurchasesOf(drinkId).slice().sort((a, b) => (b.date || '').localeCompare(a.date || ''));
+    return ps[0] || null;
+  }
+  function formatDate(iso) {
+    if (!iso) return '';
+    const [y, m, d] = iso.split('-');
+    return `${d}.${m}.${y}`;
+  }
+  function escapeHtml(str) {
+    return String(str).replace(/[&<>"']/g, c => ({
+      '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'
+    }[c]));
+  }
+  function placeholderImg() {
+    return 'data:image/svg+xml;utf8,<svg xmlns=%22http://www.w3.org/2000/svg%22 width=%22110%22 height=%2280%22><rect width=%22110%22 height=%2280%22 fill=%22%23333%22/><text x=%2255%22 y=%2245%22 font-size=%2212%22 fill=%22%23777%22 text-anchor=%22middle%22>Нет фото</text></svg>';
+  }
+  function showToast(text) {
+    const t = document.getElementById('toast');
+    t.textContent = text;
+    t.classList.add('show');
+    setTimeout(() => t.classList.remove('show'), 1800);
+  }
+
+  // ---------- ЭКСПОРТ / ИМПОРТ ----------
+  function exportBackup() {
+    const backup = {
+      version: 1,
+      exportedAt: new Date().toISOString(),
+      drinks: drinks,
+      purchases: purchases,
+      monthlyLimit: monthlyLimit
+    };
+    const json = JSON.stringify(backup, null, 2);
+    const blob = new Blob([json], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    const today = new Date().toISOString().slice(0, 10);
+    a.href = url;
+    a.download = `energy-backup-${today}.json`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    setTimeout(() => URL.revokeObjectURL(url), 1000);
+    showToast('📥 Файл сохранён: energy-backup-' + today + '.json');
+  }
+
+  let pendingImportData = null;
+
+  function openImportPicker() {
+    document.getElementById('importFileInput').value = '';
+    document.getElementById('importFileInput').click();
+  }
+
+  function onImportFileSelected(e) {
+    const f = e.target.files && e.target.files[0];
+    if (!f) return;
+
+    const reader = new FileReader();
+    reader.onload = ev => {
+      try {
+        const data = JSON.parse(ev.target.result);
+        if (!data || typeof data !== 'object' || !Array.isArray(data.drinks)) {
+          throw new Error('Не тот формат');
+        }
+        pendingImportData = data;
+        showImportChoice(data);
+      } catch (err) {
+        alert('Не получилось прочитать файл. Возможно, это не резервная копия.');
+        console.warn(err);
+      }
+    };
+    reader.onerror = () => alert('Ошибка чтения файла.');
+    reader.readAsText(f);
+  }
+
+  function showImportChoice(data) {
+    const cntD = Array.isArray(data.drinks) ? data.drinks.length : 0;
+    const cntP = Array.isArray(data.purchases) ? data.purchases.length : 0;
+    let when = '';
+    if (data.exportedAt) {
+      const d = new Date(data.exportedAt);
+      when = `Дата копии: ${d.toLocaleDateString('ru-RU')} ${d.toLocaleTimeString('ru-RU', {hour:'2-digit', minute:'2-digit'})}`;
+    }
+    document.getElementById('importPreviewInfo').innerHTML = `
+      В файле:<br>
+      🏷 Энергетиков: <b>${cntD}</b><br>
+      🛒 Покупок: <b>${cntP}</b><br>
+      ${when ? '<br>' + when : ''}
+    `;
+    document.getElementById('importChoiceModal').classList.add('open');
+  }
+
+  function cancelImport() {
+    pendingImportData = null;
+    document.getElementById('importChoiceModal').classList.remove('open');
+  }
+
+  function confirmImport(mode) {
+    if (!pendingImportData) return;
+
+    const inDrinks = Array.isArray(pendingImportData.drinks) ? pendingImportData.drinks : [];
+    const inPurchases = Array.isArray(pendingImportData.purchases) ? pendingImportData.purchases : [];
+    const inLimit = pendingImportData.monthlyLimit;
+
+    // Нормализация
+    const normDrinks = inDrinks.map(d => ({
+      id: d.id || ('d' + Date.now() + Math.random().toString(36).slice(2, 5)),
+      name: d.name || '',
+      brand: d.brand || '',
+      rating: d.rating || 5,
+      note: d.note || '',
+      photo: d.photo || ''
+    }));
+    const normPurchases = inPurchases.map(p => ({
+      id: p.id || ('p' + Date.now() + Math.random().toString(36).slice(2, 5)),
+      drinkId: p.drinkId,
+      date: p.date || '',
+      price: p.price === '' || p.price == null ? '' : Number(p.price),
+      currency: p.currency || 'BYN',
+      place: p.place || '',
+      priceBYN: p.priceBYN
+    }));
+
+    if (mode === 'replace') {
+      drinks = normDrinks;
+      purchases = normPurchases;
+      if (typeof inLimit === 'number' && inLimit > 0) {
+        monthlyLimit = inLimit;
+        saveLimit();
+      }
+    } else {
+      // Добавить: доклеиваем, разрешая конфликты по id
+      const existingDrinkIds = new Set(drinks.map(d => d.id));
+      const idMap = new Map(); // старый id → новый id (если конфликт)
+
+      normDrinks.forEach(d => {
+        let newId = d.id;
+        if (existingDrinkIds.has(newId)) {
+          newId = 'd' + Date.now() + Math.random().toString(36).slice(2, 5);
+          idMap.set(d.id, newId);
+        }
+        existingDrinkIds.add(newId);
+        drinks.push({ ...d, id: newId });
+      });
+
+      const existingPurchaseIds = new Set(purchases.map(p => p.id));
+      normPurchases.forEach(p => {
+        let newId = p.id;
+        if (existingPurchaseIds.has(newId)) {
+          newId = 'p' + Date.now() + Math.random().toString(36).slice(2, 5);
+        }
+        existingPurchaseIds.add(newId);
+        // Если у покупки drinkId замаплен на новый id — применяем
+        const mappedDrinkId = idMap.get(p.drinkId) || p.drinkId;
+        purchases.push({ ...p, id: newId, drinkId: mappedDrinkId });
+      });
+    }
+
+    try {
+      saveAll();
+    } catch (e) {
+      alert('Не хватило места в браузере. Возможно, слишком много фото.');
+      return;
+    }
+
+    pendingImportData = null;
+    document.getElementById('importChoiceModal').classList.remove('open');
+    render();
+    showToast(mode === 'replace'
+      ? `✅ Заменено: ${normDrinks.length} энергетиков, ${normPurchases.length} покупок`
+      : `✅ Добавлено: ${normDrinks.length} энергетиков, ${normPurchases.length} покупок`);
+  }
+
+  async function loadRates() {
+    if (ratesCache) return ratesCache;
+    try {
+      const res = await fetch('https://api.nbrb.by/exrates/rates?periodicity=0');
+      const data = await res.json();
+      const map = { BYN: 1 };
+      data.forEach(r => {
+        map[r.Cur_Abbreviation] = r.Cur_OfficialRate / r.Cur_Scale;
+      });
+      ratesCache = map;
+      updateRatesInfo(true);
+      await migratePriceBYN();
+      return map;
+    } catch (e) {
+      ratesCache = { BYN: 1, USD: 3.0, EUR: 3.45, RUB: 0.036 };
+      updateRatesInfo(false);
+      await migratePriceBYN();
+      return ratesCache;
+    }
+  }
+
+  async function migratePriceBYN() {
+    let changed = false;
+    purchases.forEach(p => {
+      if (p.priceBYN === undefined && p.price !== '' && p.price != null) {
+        const byn = toBYN(p.price, p.currency || 'BYN');
+        if (byn != null) {
+          p.priceBYN = Math.round(byn * 100) / 100;
+          changed = true;
+        }
+      }
+    });
+    if (changed) {
+      try { saveAll(); } catch (e) {}
+    }
+  }
+
+  function toBYN(price, currency) {
+    if (price === '' || price == null) return null;
+    const r = (ratesCache && ratesCache[currency]) || 1;
+    return Number(price) * r;
+  }
+
+  function purchaseBYN(p) {
+    if (p.price === '' || p.price == null) return null;
+    if (p.priceBYN != null) return p.priceBYN;
+    return toBYN(p.price, p.currency || 'BYN');
+  }
+
+  function updateRatesInfo(ok) {
+    const el = document.getElementById('ratesInfo');
+    if (!el) return;
+    if (currentView === 'calendar' || currentView === 'charts') { el.textContent = ''; return; }
+    if (!ratesCache) { el.textContent = ''; return; }
+    const u = ratesCache.USD ? ratesCache.USD.toFixed(4) : '—';
+    const e = ratesCache.EUR ? ratesCache.EUR.toFixed(4) : '—';
+    const r = ratesCache.RUB ? (ratesCache.RUB * 100).toFixed(4) : '—';
+    el.textContent = `Курсы Нацбанка${ok ? '' : ' (приблизительные)'}: 1 USD = ${u} BYN · 1 EUR = ${e} BYN · 100 RUB = ${r} BYN`;
+  }
+
+  // ---------- ПЕРЕКЛЮЧЕНИЕ ВИДОВ ----------
+  let currentView = 'tier';
+  const now = new Date();
+  let calYear = now.getFullYear();
+  let calMonth = now.getMonth();
+
+  async function setView(v) {
+    currentView = v;
+    document.getElementById('btnTier').classList.toggle('active', v === 'tier');
+    document.getElementById('btnPrice').classList.toggle('active', v === 'price');
+    document.getElementById('btnCal').classList.toggle('active', v === 'calendar');
+    document.getElementById('btnCharts').classList.toggle('active', v === 'charts');
+    if (v === 'price') await loadRates();
+    if (v === 'charts') await loadRates();
+    render();
+  }
+
+  function render() {
+    document.getElementById('tiers').style.display = 'none';
+    document.getElementById('listView').style.display = 'none';
+    document.getElementById('calendarView').style.display = 'none';
+    document.getElementById('chartsView').style.display = 'none';
+
+    if (currentView === 'tier') {
+      document.getElementById('tiers').style.display = 'block';
+      renderTiers();
+      renderTierExtras();
+    } else if (currentView === 'price') {
+      document.getElementById('listView').style.display = 'block';
+      renderList();
+    } else if (currentView === 'calendar') {
+      document.getElementById('calendarView').style.display = 'block';
+      renderCalendar();
+    } else {
+      document.getElementById('chartsView').style.display = 'block';
+      renderCharts();
+    }
+  }
+
+  // ---------- ТИР-ЛИСТ + ДОП. СЕКЦИЯ ----------
+  function renderTiers() {
+    const container = document.getElementById('tiers');
+    container.innerHTML = '';
+
+    TIERS.forEach(tier => {
+      const items = drinks.filter(d => d.rating >= tier.min && d.rating <= tier.max);
+
+      const tierEl = document.createElement('div');
+      tierEl.className = 'tier';
+
+      const itemsHtml = items.length
+        ? items.map(d => {
+            const cnt = getPurchasesOf(d.id).length;
+            const last = getLastPurchase(d.id);
+            const priceText = last && last.price !== '' ? ` · ${Number(last.price).toFixed(2)} ${CURRENCY_SHORT[last.currency || 'BYN']}` : '';
+            return `
+              <div class="card" onclick="showNote('${d.id}')">
+                <button class="del" onclick="event.stopPropagation(); removeDrink('${d.id}')">✕</button>
+                <img src="${d.photo || placeholderImg()}">
+                <div class="name">${escapeHtml(d.name)}</div>
+                <div class="brand">${escapeHtml(d.brand || '')}</div>
+                <div class="rating">⭐ ${d.rating}/10${priceText}</div>
+                ${cnt > 0 ? `<div class="times">🛒 ${cnt} ${plural(cnt, 'раз', 'раза', 'раз')}</div>` : ''}
+                ${d.note ? `<div class="note-preview">${escapeHtml(d.note)}</div>` : ''}
+              </div>
+            `;
+          }).join('')
+        : '<div class="tier-empty">пусто</div>';
+
+      tierEl.innerHTML = `
+        <div class="tier-label" style="background:${tier.color}">
+          <div>${tier.emoji} ${tier.name}</div>
+          <div class="tier-range">${tier.min === tier.max ? tier.min : tier.min + '–' + tier.max} / 10</div>
+        </div>
+        <div class="tier-items">${itemsHtml}</div>
+      `;
+      container.appendChild(tierEl);
+    });
+  }
+
+  function renderTierExtras() {
+    const container = document.getElementById('tiers');
+    const extras = document.createElement('div');
+    extras.id = 'tierExtras';
+
+    const stats = countStats();
+
+    extras.innerHTML = `
+      <div class="section-divider">📊 Статистика и графики</div>
+
+      <div class="stats-grid">
+        <div class="stat-card year"><div class="label">За год</div><div class="value">${stats.year}</div><div class="unit">${stats.yearLabel}</div></div>
+        <div class="stat-card quarter"><div class="label">За квартал</div><div class="value">${stats.quarter}</div><div class="unit">${stats.quarterLabel}</div></div>
+        <div class="stat-card all"><div class="label">Всего</div><div class="value">${stats.all}</div><div class="unit">за всё время</div></div>
+      </div>
+
+      <div class="chart-block">
+        <h3>📅 Динамика по месяцам (${now.getFullYear()})</h3>
+        <div class="chart-canvas-wrap" id="tierChartMonthsWrap"><canvas id="tierChartMonths"></canvas></div>
+      </div>
+    `;
+    container.appendChild(extras);
+
+    if (typeof Chart !== 'undefined') {
+      if (charts.tierChartMonths) { charts.tierChartMonths.destroy(); delete charts.tierChartMonths; }
+      const year = now.getFullYear();
+      const monthCounts = new Array(12).fill(0);
+      purchases.forEach(p => {
+        if (!p.date) return;
+        const [yy, mm] = p.date.split('-').map(Number);
+        if (yy === year) monthCounts[mm - 1]++;
+      });
+      Chart.defaults.color = '#ccc';
+      Chart.defaults.borderColor = '#444';
+      charts.tierChartMonths = new Chart(document.getElementById('tierChartMonths'), {
+        type: 'line',
+        data: {
+          labels: MONTH_SHORT,
+          datasets: [{
+            label: 'Выпито раз',
+            data: monthCounts,
+            borderColor: '#29b6f6',
+            backgroundColor: 'rgba(41,182,246,0.15)',
+            tension: 0.3,
+            fill: true,
+            pointBackgroundColor: '#29b6f6',
+            pointBorderColor: '#fff',
+            pointRadius: 5,
+            pointHoverRadius: 7,
+            borderWidth: 3,
+          }]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: { legend: { display: false } },
+          scales: { y: { beginAtZero: true, ticks: { precision: 0 } } }
+        }
+      });
+    } else {
+      document.getElementById('tierChartMonthsWrap').innerHTML = '<div class="chart-empty">График недоступен без интернета</div>';
+    }
+  }
+
+  function plural(n, one, few, many) {
+    const mod10 = n % 10, mod100 = n % 100;
+    if (mod10 === 1 && mod100 !== 11) return one;
+    if (mod10 >= 2 && mod10 <= 4 && (mod100 < 10 || mod100 >= 20)) return few;
+    return many;
+  }
+
+  // ---------- ПО ЦЕНЕ ----------
+  function renderList() {
+    const container = document.getElementById('listView');
+    container.innerHTML = '';
+
+    const summary = computeSpendSummary();
+
+    const summaryEl = document.createElement('div');
+    summaryEl.className = 'spend-summary';
+    summaryEl.innerHTML = `
+      <div class="spend-card">
+        <div class="label">Потрачено в этом месяце</div>
+        <div class="value">${summary.month.toFixed(2)} BYN</div>
+      </div>
+      <div class="spend-card all">
+        <div class="label">Всего потрачено</div>
+        <div class="value">${summary.total.toFixed(2)} BYN</div>
+      </div>
+    `;
+    container.appendChild(summaryEl);
+
+    if (drinks.length === 0) {
+      const empty = document.createElement('div');
+      empty.className = 'list-empty';
+      empty.textContent = 'Пока пусто. Добавь энергетик!';
+      container.appendChild(empty);
+      return;
+    }
+
+    const withPrice = drinks.map(d => {
+      const last = getLastPurchase(d.id);
+      const byn = last && last.price !== '' ? purchaseBYN(last) : null;
+      return { drink: d, last, byn };
+    });
+
+    withPrice.sort((a, b) => {
+      const va = a.byn == null ? -Infinity : a.byn;
+      const vb = b.byn == null ? -Infinity : b.byn;
+      return vb - va;
+    });
+
+    const header = document.createElement('div');
+    header.className = 'list-header';
+    header.textContent = 'От дорогих к дешёвым (последняя цена, всё в белорусских рублях)';
+    container.appendChild(header);
+
+    withPrice.forEach(({drink: d, last, byn}) => {
+      const t = tierByRating(d.rating);
+      let priceHtml = '—';
+      if (last && last.price !== '') {
+        const cur = last.currency || 'BYN';
+        if (cur === 'BYN') {
+          priceHtml = `${Number(last.price).toFixed(2)} BYN`;
+        } else {
+          priceHtml = `${Number(last.price).toFixed(2)} ${CURRENCY_SHORT[cur]}
+            <div class="conv">≈ ${byn != null ? byn.toFixed(2) : '—'} BYN</div>`;
+        }
+      }
+      const cnt = getPurchasesOf(d.id).length;
+      const row = document.createElement('div');
+      row.className = 'list-row';
+      row.onclick = () => showNote(d.id);
+      row.innerHTML = `
+        <img src="${d.photo || placeholderImg()}">
+        <div class="info">
+          <div class="title">${escapeHtml(d.name)}</div>
+          <div class="sub">
+            ${escapeHtml(d.brand || '')} · ⭐ ${d.rating}/10 ${t.emoji} ${t.name}
+            ${last && last.date ? ' · 📅 ' + formatDate(last.date) : ''}
+            ${last && last.place ? ' · 📍 ' + escapeHtml(last.place) : ''}
+            ${cnt > 0 ? ' · 🛒 ' + cnt + ' ' + plural(cnt, 'раз', 'раза', 'раз') : ''}
+          </div>
+        </div>
+        <div class="price">${priceHtml}</div>
+      `;
+      container.appendChild(row);
+    });
+  }
+
+  function computeSpendSummary() {
+    const today = new Date();
+    const y = today.getFullYear();
+    const m = today.getMonth();
+    let monthSum = 0;
+    let totalSum = 0;
+
+    purchases.forEach(p => {
+      const byn = purchaseBYN(p);
+      if (byn == null) return;
+      totalSum += byn;
+      if (p.date) {
+        const [yy, mm] = p.date.split('-').map(Number);
+        if (yy === y && (mm - 1) === m) monthSum += byn;
+      }
+    });
+
+    return { month: Math.round(monthSum * 100) / 100, total: Math.round(totalSum * 100) / 100 };
+  }
+
+  // ---------- КАЛЕНДАРЬ ----------
+  function countStats() {
+    const today = new Date();
+    const y = today.getFullYear();
+    const m = today.getMonth();
+    const q = Math.floor(m / 3);
+    const qStart = q * 3, qEnd = qStart + 2;
+    let yearCount = 0, quarterCount = 0, allCount = 0;
+    purchases.forEach(p => {
+      if (!p.date) return;
+      const [yy, mm] = p.date.split('-').map(Number);
+      const monthIdx = mm - 1;
+      allCount++;
+      if (yy === y) {
+        yearCount++;
+        if (monthIdx >= qStart && monthIdx <= qEnd) quarterCount++;
+      }
+    });
+    return { year: yearCount, quarter: quarterCount, all: allCount, yearLabel: `за ${y} год`, quarterLabel: `${q + 1} квартал ${y}` };
+  }
+
+  function renderCalendar() {
+    const el = document.getElementById('calendarView');
+    const monthPrefix = `${calYear}-${String(calMonth + 1).padStart(2, '0')}`;
+    const inMonth = purchases.filter(p => p.date && p.date.startsWith(monthPrefix));
+    const total = inMonth.length;
+    const over = total > monthlyLimit;
+
+    const byDay = {};
+    inMonth.forEach(p => {
+      const day = parseInt(p.date.slice(8, 10), 10);
+      byDay[day] = (byDay[day] || 0) + 1;
+    });
+
+    const first = new Date(calYear, calMonth, 1);
+    let startDow = (first.getDay() + 6) % 7;
+    const daysInMonth = new Date(calYear, calMonth + 1, 0).getDate();
+    const today = new Date();
+    const isThisMonth = today.getFullYear() === calYear && today.getMonth() === calMonth;
+    const todayDay = today.getDate();
+
+    let cells = '';
+    for (let i = 0; i < startDow; i++) cells += `<div class="cal-day empty"></div>`;
+    for (let d = 1; d <= daysInMonth; d++) {
+      const cnt = byDay[d] || 0;
+      let cls = 'cal-day';
+      if (cnt === 1) cls += ' has-1';
+      else if (cnt === 2) cls += ' has-2';
+      else if (cnt === 3) cls += ' has-3';
+      else if (cnt > 3) cls += ' has-many';
+      if (isThisMonth && d === todayDay) cls += ' today';
+      cells += `<div class="${cls}"><div class="num">${d}</div>${cnt ? `<div class="cnt">${cnt}⚡</div>` : ''}</div>`;
+    }
+
+    const statusClass = over ? 'over' : 'ok';
+    const statusText = over ? `⚠️ Перебор энергетиков!` : `✅ В пределах нормы`;
+
+    el.innerHTML = `
+      <div class="cal-wrap">
+        <div class="cal-nav">
+          <button onclick="calPrev()">←</button>
+          <div class="cal-month">${MONTH_NAMES[calMonth]} ${calYear}</div>
+          <button onclick="calNext()">→</button>
+        </div>
+        <div class="cal-status ${statusClass}">
+          ${statusText}
+          <span class="sub">Выпито ${total} из ${monthlyLimit} в этом месяце</span>
+        </div>
+        <div class="cal-limit">
+          <span>Лимит в месяц</span>
+          <input type="number" min="1" max="31" value="${monthlyLimit}" onchange="setMonthlyLimit(this.value)">
+        </div>
+        <div class="cal-grid">
+          ${DOW.map(x => `<div class="cal-dow">${x}</div>`).join('')}
+          ${cells}
+        </div>
+        <div class="cal-legend">
+          Синий — 1, жёлтый — 2, красный — 3, тёмно-красный — 4+<br>
+          Зелёная рамка — сегодня
+        </div>
+      </div>
+    `;
+  }
+
+  function calPrev() { calMonth--; if (calMonth < 0) { calMonth = 11; calYear--; } renderCalendar(); }
+  function calNext() { calMonth++; if (calMonth > 11) { calMonth = 0; calYear++; } renderCalendar(); }
+  function setMonthlyLimit(v) {
+    const n = parseInt(v, 10);
+    if (!n || n < 1) { renderCalendar(); return; }
+    monthlyLimit = n;
+    saveLimit();
+    renderCalendar();
+    showToast('Лимит: ' + n + ' в месяц');
+  }
+
+  // ---------- ГРАФИКИ (ОТДЕЛЬНАЯ ВКЛАДКА) ----------
+  const charts = {};
+  function renderCharts() {
+    const el = document.getElementById('chartsView');
+    el.innerHTML = `
+      <div class="charts-wrap">
+        <div class="chart-block">
+          <h3>📅 Динамика по месяцам (${now.getFullYear()})</h3>
+          <div class="chart-canvas-wrap" id="chartMonthsWrap"><canvas id="chartMonths"></canvas></div>
+        </div>
+        <div class="chart-block">
+          <h3>🏷️ Топ брендов</h3>
+          <div class="chart-canvas-wrap" id="chartBrandsWrap"><canvas id="chartBrands"></canvas></div>
+        </div>
+        <div class="chart-block">
+          <h3>💰 Расходы по месяцам (${now.getFullYear()})</h3>
+          <div class="chart-canvas-wrap" id="chartSpendWrap"><canvas id="chartSpend"></canvas></div>
+        </div>
+      </div>
+    `;
+
+    if (typeof Chart === 'undefined') {
+      document.getElementById('chartMonthsWrap').innerHTML = '<div class="chart-empty">Графики недоступны без интернета</div>';
+      document.getElementById('chartBrandsWrap').innerHTML = '<div class="chart-empty">Графики недоступны без интернета</div>';
+      document.getElementById('chartSpendWrap').innerHTML = '<div class="chart-empty">Графики недоступны без интернета</div>';
+      return;
+    }
+
+    ['chartMonths','chartBrands','chartSpend'].forEach(k => {
+      if (charts[k]) { charts[k].destroy(); delete charts[k]; }
+    });
+
+    Chart.defaults.color = '#ccc';
+    Chart.defaults.borderColor = '#444';
+
+    const year = now.getFullYear();
+
+    const monthCounts = new Array(12).fill(0);
+    purchases.forEach(p => {
+      if (!p.date) return;
+      const [yy, mm] = p.date.split('-').map(Number);
+      if (yy === year) monthCounts[mm - 1]++;
+    });
+    charts.chartMonths = new Chart(document.getElementById('chartMonths'), {
+      type: 'line',
+      data: {
+        labels: MONTH_SHORT,
+        datasets: [{
+          label: 'Выпито раз',
+          data: monthCounts,
+          borderColor: '#29b6f6',
+          backgroundColor: 'rgba(41,182,246,0.15)',
+          tension: 0.3,
+          fill: true,
+          pointBackgroundColor: '#29b6f6',
+          pointBorderColor: '#fff',
+          pointRadius: 5,
+          pointHoverRadius: 7,
+          borderWidth: 3,
+        }]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: { legend: { display: false } },
+        scales: { y: { beginAtZero: true, ticks: { precision: 0 } } }
+      }
+    });
+
+    const brandCount = {};
+    purchases.forEach(p => {
+      const drink = drinks.find(d => d.id === p.drinkId);
+      if (!drink) return;
+      const b = (drink.brand || 'Без бренда').trim() || 'Без бренда';
+      brandCount[b] = (brandCount[b] || 0) + 1;
+    });
+    const brandLabels = Object.keys(brandCount);
+    const brandValues = brandLabels.map(k => brandCount[k]);
+
+    if (brandLabels.length === 0) {
+      document.getElementById('chartBrandsWrap').innerHTML = '<div class="chart-empty">Нет данных о покупках</div>';
+    } else {
+      const palette = ['#00c853','#29b6f6','#ffca28','#ef5350','#ab47bc','#26a69a','#ff7043','#42a5f5','#9ccc65','#ec407a'];
+      charts.chartBrands = new Chart(document.getElementById('chartBrands'), {
+        type: 'doughnut',
+        data: {
+          labels: brandLabels,
+          datasets: [{
+            data: brandValues,
+            backgroundColor: brandLabels.map((_, i) => palette[i % palette.length]),
+            borderColor: '#262626',
+            borderWidth: 2,
+          }]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: { legend: { position: 'bottom', labels: { color: '#ccc', boxWidth: 12, padding: 8 } } }
+        }
+      });
+    }
+
+    const monthSpend = new Array(12).fill(0);
+    purchases.forEach(p => {
+      if (!p.date || p.price === '' || p.price == null) return;
+      const [yy, mm] = p.date.split('-').map(Number);
+      if (yy === year) {
+        const byn = purchaseBYN(p);
+        if (byn != null) monthSpend[mm - 1] += byn;
+      }
+    });
+    charts.chartSpend = new Chart(document.getElementById('chartSpend'), {
+      type: 'line',
+      data: {
+        labels: MONTH_SHORT,
+        datasets: [{
+          label: 'Потрачено BYN',
+          data: monthSpend.map(x => Math.round(x * 100) / 100),
+          borderColor: '#00c853',
+          backgroundColor: 'rgba(0,200,83,0.15)',
+          tension: 0.3,
+          fill: true,
+          pointBackgroundColor: '#00c853',
+          pointBorderColor: '#fff',
+          pointRadius: 5,
+          pointHoverRadius: 7,
+          borderWidth: 3,
+        }]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: { legend: { display: false } },
+        scales: { y: { beginAtZero: true } }
+      }
+    });
+  }
+
+  // ---------- МОДАЛКА: ДОБАВЛЕНИЕ/РЕДАКТИРОВАНИЕ ЭНЕРГЕТИКА ----------
+  let editingDrinkId = null;
+
+  function openNewDrinkModal() {
+    editingDrinkId = null;
+    document.getElementById('drinkModalTitle').textContent = 'Новый энергетик';
+    document.getElementById('inputName').value = '';
+    document.getElementById('inputBrand').value = '';
+    document.getElementById('inputPhoto').value = '';
+    document.getElementById('photoPreview').style.display = 'none';
+    document.getElementById('photoPreview').src = '';
+    document.getElementById('inputNote').value = '';
+    document.getElementById('inputPrice').value = '';
+    document.getElementById('inputCurrency').value = 'BYN';
+    const today = new Date().toISOString().slice(0, 10);
+    document.getElementById('inputDate').value = today;
+    document.getElementById('inputPlace').value = '';
+    document.getElementById('inputRating').value = 5;
+    onRatingInput(5);
+    document.getElementById('firstPurchaseBlock').style.display = 'block';
+    document.getElementById('drinkModal').classList.add('open');
+    setTimeout(() => document.getElementById('inputName').focus(), 100);
+  }
+
+  function openEditDrinkModal(id) {
+    const d = drinks.find(x => x.id === id);
+    if (!d) return;
+    editingDrinkId = id;
+    document.getElementById('drinkModalTitle').textContent = 'Редактировать энергетик';
+    document.getElementById('inputName').value = d.name || '';
+    document.getElementById('inputBrand').value = d.brand || '';
+    document.getElementById('inputPhoto').value = '';
+    const prev = document.getElementById('photoPreview');
+    if (d.photo) { prev.src = d.photo; prev.style.display = 'block'; }
+    else { prev.style.display = 'none'; prev.src = ''; }
+    document.getElementById('inputNote').value = d.note || '';
+    document.getElementById('inputRating').value = d.rating || 5;
+    onRatingInput(d.rating || 5);
+    document.getElementById('firstPurchaseBlock').style.display = 'none';
+    document.getElementById('drinkModal').classList.add('open');
+    setTimeout(() => document.getElementById('inputName').focus(), 100);
+  }
+
+  function closeDrinkModal() {
+    document.getElementById('drinkModal').classList.remove('open');
+  }
+
+  function onPhotoChange(e) {
+    const f = e.target.files && e.target.files[0];
+    const prev = document.getElementById('photoPreview');
+    if (!f) { prev.style.display = 'none'; return; }
+    const reader = new FileReader();
+    reader.onload = ev => { prev.src = ev.target.result; prev.style.display = 'block'; };
+    reader.readAsDataURL(f);
+  }
+
+  function onRatingInput(val) {
+    const r = parseInt(val, 10);
+    document.getElementById('ratingValue').textContent = r;
+    const t = tierByRating(r);
+    document.getElementById('tierPreview').textContent = t.emoji + ' ' + t.name;
+  }
+
+  function saveDrink() {
+    const nameEl = document.getElementById('inputName');
+    const name = nameEl.value.trim();
+    const brand = document.getElementById('inputBrand').value.trim();
+    const note = document.getElementById('inputNote').value.trim();
+    const rating = parseInt(document.getElementById('inputRating').value, 10);
+    const fileInput = document.getElementById('inputPhoto');
+
+    if (!name) { alert('Введите название!'); nameEl.focus(); return; }
+
+    if (editingDrinkId) {
+      const d = drinks.find(x => x.id === editingDrinkId);
+      if (!d) return;
+      d.name = name;
+      d.brand = brand;
+      d.note = note;
+      d.rating = rating;
+
+      const finish = (photoData) => {
+        if (photoData !== null) d.photo = photoData;
+        try { saveAll(); } catch (e) { return; }
+        render();
+        closeDrinkModal();
+        showToast('✅ Изменено: ' + name);
+        editingDrinkId = null;
+      };
+
+      if (fileInput.files && fileInput.files[0]) {
+        compressImage(fileInput.files[0], 400, 0.7).then(finish).catch(() => finish(null));
+      } else {
+        finish(null);
+      }
+    } else {
+      const priceRaw = document.getElementById('inputPrice').value.trim();
+      const currency = document.getElementById('inputCurrency').value;
+      const date = document.getElementById('inputDate').value;
+      const place = document.getElementById('inputPlace').value.trim();
+      const price = priceRaw === '' ? '' : Number(priceRaw);
+
+      const finish = (photoData) => {
+        const drinkId = 'd' + Date.now() + Math.random().toString(36).slice(2, 5);
+        drinks.push({ id: drinkId, name, brand, rating, note, photo: photoData || '' });
+        if (date || price !== '' || place) {
+          const priceBYN = price !== '' ? toBYN(price, currency) : null;
+          purchases.push({
+            id: 'p' + Date.now() + Math.random().toString(36).slice(2, 5),
+            drinkId: drinkId,
+            date: date || '',
+            price: price,
+            currency: currency,
+            place: place,
+            priceBYN: priceBYN != null ? Math.round(priceBYN * 100) / 100 : undefined
+          });
+        }
+        try { saveAll(); } catch (e) { drinks.pop(); purchases.pop(); return; }
+        render();
+        closeDrinkModal();
+        showToast('✅ Сохранено: ' + name);
+      };
+
+      if (fileInput.files && fileInput.files[0]) {
+        compressImage(fileInput.files[0], 400, 0.7).then(finish).catch(() => finish(''));
+      } else {
+        finish('');
+      }
+    }
+  }
+
+  function compressImage(file, maxWidth, quality) {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = e => {
+        const img = new Image();
+        img.onload = () => {
+          const scale = Math.min(1, maxWidth / img.width);
+          const canvas = document.createElement('canvas');
+          canvas.width = Math.round(img.width * scale);
+          canvas.height = Math.round(img.height * scale);
+          const ctx = canvas.getContext('2d');
+          ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+          resolve(canvas.toDataURL('image/jpeg', quality));
+        };
+        img.onerror = reject;
+        img.src = e.target.result;
+      };
+      reader.onerror = reject;
+      reader.readAsDataURL(file);
+    });
+  }
+
+  // ---------- МОДАЛКА: ПОВТОРНАЯ ЗАПИСЬ ----------
+  let repeatDrinkId = null;
+
+  function openRepeatModal(drinkId) {
+    const d = drinks.find(x => x.id === drinkId);
+    if (!d) return;
+    repeatDrinkId = drinkId;
+    document.getElementById('repeatModalTitle').textContent = 'Записать ещё раз: ' + d.name;
+    document.getElementById('repeatDrinkName').value = d.name + (d.brand ? ' · ' + d.brand : '');
+
+    const last = getLastPurchase(drinkId);
+    document.getElementById('repeatPrice').value = last && last.price !== '' ? last.price : '';
+    document.getElementById('repeatCurrency').value = last && last.currency ? last.currency : 'BYN';
+    document.getElementById('repeatPlace').value = last && last.place ? last.place : '';
+    const today = new Date().toISOString().slice(0, 10);
+    document.getElementById('repeatDate').value = today;
+
+    document.getElementById('repeatModal').classList.add('open');
+    setTimeout(() => document.getElementById('repeatPrice').focus(), 100);
+  }
+  function closeRepeatModal() {
+    document.getElementById('repeatModal').classList.remove('open');
+    repeatDrinkId = null;
+  }
+  function saveRepeat() {
+    if (!repeatDrinkId) return;
+    const priceRaw = document.getElementById('repeatPrice').value.trim();
+    const currency = document.getElementById('repeatCurrency').value;
+    const date = document.getElementById('repeatDate').value;
+    const place = document.getElementById('repeatPlace').value.trim();
+
+    const price = priceRaw === '' ? '' : Number(priceRaw);
+    const priceBYN = price !== '' ? toBYN(price, currency) : null;
+
+    purchases.push({
+      id: 'p' + Date.now() + Math.random().toString(36).slice(2, 5),
+      drinkId: repeatDrinkId,
+      date: date || '',
+      price: price,
+      currency: currency,
+      place: place,
+      priceBYN: priceBYN != null ? Math.round(priceBYN * 100) / 100 : undefined
+    });
+    try { saveAll(); } catch (e) { purchases.pop(); return; }
+
+    const d = drinks.find(x => x.id === repeatDrinkId);
+    const name = d ? d.name : '';
+    const wasViewing = currentViewId === repeatDrinkId;
+    closeRepeatModal();
+    render();
+    showToast('✅ Записано ещё раз: ' + name);
+    if (wasViewing) showNote(repeatDrinkId);
+    repeatDrinkId = null;
+  }
+
+  // ---------- МОДАЛКА: РЕДАКТИРОВАНИЕ ПОКУПКИ ----------
+  let editingPurchaseId = null;
+  function openPurchaseModal(purchaseId) {
+    const p = purchases.find(x => x.id === purchaseId);
+    if (!p) return;
+    editingPurchaseId = purchaseId;
+    document.getElementById('purPrice').value = p.price === '' ? '' : p.price;
+    document.getElementById('purCurrency').value = p.currency || 'BYN';
+    document.getElementById('purDate').value = p.date || '';
+    document.getElementById('purPlace').value = p.place || '';
+    document.getElementById('purchaseModal').classList.add('open');
+  }
+  function closePurchaseModal() {
+    document.getElementById('purchaseModal').classList.remove('open');
+    editingPurchaseId = null;
+  }
+  function savePurchaseEdit() {
+    if (!editingPurchaseId) return;
+    const p = purchases.find(x => x.id === editingPurchaseId);
+    if (!p) return;
+    const priceRaw = document.getElementById('purPrice').value.trim();
+    p.price = priceRaw === '' ? '' : Number(priceRaw);
+    p.currency = document.getElementById('purCurrency').value;
+    p.date = document.getElementById('purDate').value;
+    p.place = document.getElementById('purPlace').value.trim();
+    if (p.price !== '' && p.price != null) {
+      const byn = toBYN(p.price, p.currency);
+      p.priceBYN = byn != null ? Math.round(byn * 100) / 100 : undefined;
+    } else {
+      p.priceBYN = undefined;
+    }
+    try { saveAll(); } catch (e) { return; }
+    closePurchaseModal();
+    render();
+    if (currentViewId) showNote(currentViewId);
+    showToast('Покупка изменена');
+  }
+
+  // ---------- ПРОСМОТР ЭНЕРГЕТИКА ----------
+  let currentViewId = null;
+
+  async function showNote(id) {
+    const d = drinks.find(x => x.id === id);
+    if (!d) return;
+    currentViewId = id;
+    const t = tierByRating(d.rating);
+
+    const ps = getPurchasesOf(id).slice().sort((a, b) => (a.date || '').localeCompare(b.date || ''));
+    let totalBYN = 0;
+    let countPrice = 0;
+    ps.forEach(p => {
+      const byn = purchaseBYN(p);
+      if (byn != null) { totalBYN += byn; countPrice++; }
+    });
+    const avgBYN = countPrice > 0 ? totalBYN / countPrice : 0;
+
+    let purchasesHtml = '';
+    if (ps.length === 0) {
+      purchasesHtml = '<div style="color:#777; font-size:13px; padding:8px 0;">Покупок пока нет</div>';
+    } else {
+      ps.slice().reverse().forEach(p => {
+        const byn = purchaseBYN(p);
+        let priceText = p.price === '' || p.price == null ? '—' : `${Number(p.price).toFixed(2)} ${CURRENCY_SHORT[p.currency || 'BYN']}`;
+        if (p.currency && p.currency !== 'BYN' && byn != null) {
+          priceText += ` (≈${byn.toFixed(2)} BYN)`;
+        }
+        purchasesHtml += `
+          <div class="purchase-row">
+            <span class="p-date">${p.date ? formatDate(p.date) : '—'}</span>
+            <span class="p-price">${priceText}</span>
+            <span class="p-place">${escapeHtml(p.place || '')}</span>
+            <span class="p-actions">
+              <button onclick="event.stopPropagation(); openPurchaseModal('${p.id}')" title="Изменить">✏️</button>
+              <button onclick="event.stopPropagation(); removePurchase('${p.id}')" title="Удалить">✕</button>
+            </span>
+          </div>
+        `;
+      });
+    }
+
+    const body = document.getElementById('noteViewBody');
+    body.innerHTML = `
+      ${d.photo ? `<img class="top-photo" src="${d.photo}">` : ''}
+      <h2>${escapeHtml(d.name)}</h2>
+      <div class="meta">${escapeHtml(d.brand || '—')} · ⭐ ${d.rating}/10 · ${t.emoji} ${t.name}</div>
+      <div class="note-text">${d.note ? escapeHtml(d.note) : '<i style="color:#666">Без заметки</i>'}</div>
+
+      <div class="purchases-title">🛒 Мои покупки</div>
+      <div class="purchases-summary">
+        Всего: <b>${ps.length}</b> ${plural(ps.length, 'раз', 'раза', 'раз')}
+        ${countPrice > 0 ? ` · потрачено <b>${totalBYN.toFixed(2)} BYN</b> · средняя <b>${avgBYN.toFixed(2)} BYN</b>` : ''}
+      </div>
+
+      <div class="price-chart-wrap" id="priceChartWrap">
+        ${ps.filter(p => p.price !== '' && p.price != null).length >= 2
+          ? '<canvas id="priceChart"></canvas>'
+          : '<div class="price-chart-empty">Нужно хотя бы 2 покупки с ценой, чтобы увидеть график</div>'}
+      </div>
+
+      ${purchasesHtml}
+    `;
+
+    document.getElementById('noteView').classList.add('open');
+
+    if (ps.filter(p => p.price !== '' && p.price != null).length >= 2 && typeof Chart !== 'undefined') {
+      const withPrice = ps.filter(p => p.price !== '' && p.price != null)
+                          .sort((a, b) => (a.date || '').localeCompare(b.date || ''));
+      const labels = withPrice.map(p => p.date ? formatDate(p.date) : '');
+      const values = withPrice.map(p => {
+        const b = purchaseBYN(p);
+        return b != null ? Math.round(b * 100) / 100 : 0;
+      });
+      if (charts.priceChart) { charts.priceChart.destroy(); delete charts.priceChart; }
+      Chart.defaults.color = '#ccc';
+      Chart.defaults.borderColor = '#444';
+      charts.priceChart = new Chart(document.getElementById('priceChart'), {
+        type: 'line',
+        data: {
+          labels,
+          datasets: [{
+            label: 'Цена, BYN',
+            data: values,
+            borderColor: '#00c853',
+            backgroundColor: 'rgba(0,200,83,0.15)',
+            tension: 0.25,
+            fill: true,
+            pointBackgroundColor: '#00c853',
+            pointRadius: 4,
+          }]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: { legend: { display: false } },
+          scales: { y: { beginAtZero: false } }
+        }
+      });
+    }
+  }
+
+  function closeNoteView() {
+    document.getElementById('noteView').classList.remove('open');
+    if (charts.priceChart) { charts.priceChart.destroy(); delete charts.priceChart; }
+    currentViewId = null;
+  }
+
+  function openRepeatFromView() {
+    if (!currentViewId) return;
+    const id = currentViewId;
+    closeNoteView();
+    openRepeatModal(id);
+  }
+
+  function openEditFromView() {
+    if (!currentViewId) return;
+    const id = currentViewId;
+    closeNoteView();
+    openEditDrinkModal(id);
+  }
+
+  function deleteFromView() {
+    if (!currentViewId) return;
+    const id = currentViewId;
+    const d = drinks.find(x => x.id === id);
+    if (!d) return;
+    if (!confirm(`Удалить «${d.name}» и все его покупки?`)) return;
+    drinks = drinks.filter(x => x.id !== id);
+    purchases = purchases.filter(p => p.drinkId !== id);
+    try { saveAll(); } catch (e) { return; }
+    closeNoteView();
+    render();
+    showToast('Удалено');
+  }
+
+  function removePurchase(purchaseId) {
+    if (!confirm('Удалить эту покупку?')) return;
+    purchases = purchases.filter(p => p.id !== purchaseId);
+    try { saveAll(); } catch (e) { return; }
+    render();
+    if (currentViewId) showNote(currentViewId);
+    showToast('Покупка удалена');
+  }
+
+  function removeDrink(id) {
+    const d = drinks.find(x => x.id === id);
+    if (!d) return;
+    if (!confirm(`Удалить «${d.name}» и все его покупки?`)) return;
+    drinks = drinks.filter(x => x.id !== id);
+    purchases = purchases.filter(p => p.drinkId !== id);
+    try { saveAll(); } catch (e) { return; }
+    render();
+    showToast('Удалено');
+  }
+
+  // ---------- СТАРТ ----------
+  loadData();
+  render();
+  loadRates();
+</script>
+
+</body>
+</html>
